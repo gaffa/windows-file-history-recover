@@ -44,7 +44,11 @@ public class FileHistoryRecoverer {
 
         // write files
         for (FileHistoryFileUtils.MappedFile mappedFile : mappedFiles) {
-            File targetFile = new File(targetFolder + File.separator + mappedFile.name);
+            File targetFile = new File(targetFolder.getAbsolutePath() + File.separator + mappedFile.name);
+            File parent = targetFile.getParentFile();
+            if (!parent.exists() && !parent.mkdirs()) {
+                throw new IllegalStateException("Couldn't create dir: " + parent);
+            }
             try {
                 boolean newFileCreated = targetFile.createNewFile();
                 if (!newFileCreated) {

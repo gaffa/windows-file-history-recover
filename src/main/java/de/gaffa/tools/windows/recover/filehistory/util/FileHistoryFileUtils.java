@@ -6,6 +6,7 @@ import java.io.File;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class FileHistoryFileUtils {
@@ -41,16 +42,21 @@ public class FileHistoryFileUtils {
         String extension = FilenameUtils.getExtension(fileName);
 
         // eg "IMG_3001 (2014_08_05 19_01_20 UTC)"
-        String fileNameWithOutExtension = fileName.substring(0, fileName.indexOf(extension) - 1);
+        String fileNameWithOutExtension;
+        try {
+            fileNameWithOutExtension = extension.length() > 0 ? fileName.substring(0, fileName.indexOf("." + extension)) : fileName;
+        } catch (StringIndexOutOfBoundsException e) {
+            throw new RuntimeException(fileName + " is invalid");
+        }
 
         // eg 9
-        int timeStampIndex = fileNameWithOutExtension.indexOf("(");
+        int timeStampIndex = fileNameWithOutExtension.lastIndexOf("(");
 
         // eg IMG_3001
-        String fileNameWithOutTimeStamp = fileNameWithOutExtension.substring(0, timeStampIndex - 1);
+        String fileNameWithOutTimeStamps = clearTimeStamps(fileNameWithOutExtension);
 
         // eg IMG_3001.TXT
-        String name = fileNameWithOutTimeStamp + "." + extension;
+        String name = fileNameWithOutTimeStamps + "." + extension;
         mappedFile.name = relativePath.length() > 1 ? relativePath + File.separator + name : name;
 
         // eg 2014_08_05 19_01_20 UTC
@@ -60,13 +66,62 @@ public class FileHistoryFileUtils {
         try {
             mappedFile.date = dateFormat.parse(timeStamp);
         } catch (ParseException e) {
-            throw new RuntimeException("could not parse timeStamp: " + timeStamp);
+            System.out.println("warning! could not parse timeStamp: " + timeStamp + " for file: " + fileName);
         }
 
         // set file
         mappedFile.file = file;
 
         return mappedFile;
+    }
+
+    static String clearTimeStamps(String fileNameWithOutExtension) {
+
+        boolean open = false;
+        int openIndex = 0;
+        ArrayList<Character> timestamp = null;
+        ArrayList<Character> cleanString = new ArrayList<>();
+        for (Character c : fileNameWithOutExtension.toCharArray()) {
+            if (c == '(') {
+                open = true;
+                timestamp = new ArrayList<>();
+            }
+            if (open) {
+                timestamp.add(c);
+            } else {
+                cleanString.add(c);
+            }
+            if (c == ')') {
+                if (!isTimeStamp(timestamp)) {
+                    cleanString.addAll(timestamp);
+                }
+                open = false;
+                timestamp = null;
+            }
+        }
+        return toString(cleanString).trim();
+    }
+
+    static boolean isTimeStamp(ArrayList<Character> timestamp) {
+
+        ArrayList<Character> copy = new ArrayList<>(timestamp);
+        copy.remove(0);
+        copy.remove(copy.size() - 1);
+        String timeStampString = toString(copy);
+        try {
+            dateFormat.parse(timeStampString);
+            return true;
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
+    static String toString(ArrayList<Character> characters) {
+        StringBuilder builder = new StringBuilder(characters.size());
+        for (Character ch : characters) {
+            builder.append(ch);
+        }
+        return builder.toString();
     }
 
     public static class MappedFile {

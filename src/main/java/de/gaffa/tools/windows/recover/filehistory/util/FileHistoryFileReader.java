@@ -30,7 +30,7 @@ public class FileHistoryFileReader {
             List<FileHistoryFileUtils.MappedFile> mappedFiles = mappedByName.get(name);
             FileHistoryFileUtils.MappedFile selected = null;
             for (FileHistoryFileUtils.MappedFile file : mappedFiles) {
-                if (selected == null || file.date.after(selected.date)) {
+                if (selected == null || file.date == null || selected.date == null || file.date.after(selected.date)) {
                     selected = file;
                 }
             }
